@@ -20,7 +20,7 @@ El diseño guarda el precio de cada plato en el momento en que se pide. Así, si
 | Yeison Alejandro Zapata Gómez | Líder / Arquitecto Backend | [@Yazapatago](https://github.com/Yazapatago) |
 | Luis Alejandro Londoño Valle | Analista de Datos | [@AlejandroLondonoValle](https://github.com/AlejandroLondonoValle) |
 | Juan Esteban Isaza Gómez | Diseñador de API | [@JuanEstebanIG](https://github.com/JuanEstebanIG) |
-
+| Jair Alvares | QA | [@jairalvarez099-byte](https://github.com/jairalvarez099-byte) |
 ## 🏗️ Modelo de Datos (Entidades)
 El sistema se compone de las siguientes 4 entidades principales y sus relaciones:
 1. **Mesa**: Espacio físico del restaurante donde se atiende a los clientes. Tiene un número, una capacidad y un estado (libre, ocupada o reservada).
@@ -149,7 +149,7 @@ Base URL propuesta: `http://api.restadmin.com/api/v1`
 
 ## 🔗 Enlaces
 *   **Repositorio GitHub:** [https://github.com/Yazapatago/api-design-restadmin](https://github.com/Yazapatago/api-design-restadmin)
-*   **Video de Presentación:** [https://enlace-a-tu-video.com](https://enlace-a-tu-video.com)
+*   **Video de Presentación:** [https://enlace-a-tu-video.com](https://youtu.be/kMXvWcDmOhc)
 *   **Organización del equipo:** No aplica
 
 ---
