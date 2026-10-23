@@ -1,41 +1,31 @@
-from collections.abc import AsyncGenerator
-from typing import Any
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel
+"""Conexión a PostgreSQL.
 
-from app.core.config import settings
+La URL se lee de la variable de entorno DATABASE_URL.
+Formato: postgresql+psycopg://usuario:contraseña@host:puerto/base_de_datos
+"""
 
-# Argumentos de conexión especiales (ej. desactivar statement cache si se usa Neon Pooler)
-connect_args: dict[str, Any] = {}
-if "neon.tech" in settings.DATABASE_URL and "pooler" in settings.DATABASE_URL:
-    connect_args["statement_cache_size"] = 0
+import os
+from collections.abc import Generator
 
-# Motor asíncrono compatible con SQLite y Neon PostgreSQL
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.ECHO_SQL,
-    pool_pre_ping=True,
-    connect_args=connect_args,
-    future=True,
+from sqlmodel import Session, SQLModel, create_engine
+
+import app.models  # noqa: F401  (registra las tablas en SQLModel.metadata)
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+psycopg://postgres:postgres@localhost:5432/restadmin",
 )
 
-# Fábrica de sesiones asíncronas
-async_session_maker = sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-)
+# echo=True imprime el SQL generado en consola (útil para aprender; desactívalo en producción)
+engine = create_engine(DATABASE_URL, echo=True, pool_pre_ping=True)
 
-async def init_db() -> None:
-    """Crea las tablas en la base de datos si no existen."""
-    import app.models  # noqa: F401
 
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+def create_db_and_tables() -> None:
+    """Crea las tablas que aún no existen (no modifica las existentes)."""
+    SQLModel.metadata.create_all(engine)
 
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Dependencia de FastAPI para obtener la sesión de base de datos."""
-    async with async_session_maker() as session:
+
+def get_session() -> Generator[Session, None, None]:
+    """Dependencia de FastAPI: entrega una sesión por petición y la cierra al final."""
+    with Session(engine) as session:
         yield session
