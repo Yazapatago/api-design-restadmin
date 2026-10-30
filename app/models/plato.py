@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from sqlmodel import AutoString, Field, SQLModel
+from sqlmodel import AutoString, Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from app.models.detalle_pedido import DetallePedido
 
 
 # ==========================================
@@ -56,6 +60,14 @@ class Plato(PlatoBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    # LADO '1' (Plato -> DetallePedido 1:N): líneas de pedido donde aparece el plato.
+    # passive_deletes="all": el ORM no toca los detalles al borrar el plato y deja
+    # que la FK (ondelete="RESTRICT") rechace el borrado si ya se vendió.
+    detalles: list["DetallePedido"] = Relationship(
+        back_populates="plato",
+        passive_deletes="all",
     )
 
 

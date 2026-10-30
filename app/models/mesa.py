@@ -1,7 +1,11 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from sqlmodel import AutoString, Field, SQLModel
+from sqlmodel import AutoString, Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from app.models.pedido import Pedido
 
 
 # ==========================================
@@ -49,6 +53,14 @@ class Mesa(MesaBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    # LADO '1' (Mesa -> Pedido 1:N): lista de pedidos registrados en la mesa.
+    # passive_deletes="all": el ORM no toca los pedidos al borrar la mesa y deja
+    # que la FK (ondelete="RESTRICT") rechace el borrado si la mesa tiene historial.
+    pedidos: list["Pedido"] = Relationship(
+        back_populates="mesa",
+        passive_deletes="all",
     )
 
 
