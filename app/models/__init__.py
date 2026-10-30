@@ -23,6 +23,7 @@ from app.models.pedido import (
     EstadoPedido,
     Pedido,
     PedidoBase,
+    PedidoConDetallesPublic,
     PedidoCreate,
     PedidoPublic,
     PedidoUpdate,
@@ -43,6 +44,7 @@ __all__ = [
     "CategoriaPlato", "Plato", "PlatoBase", "PlatoCreate", "PlatoUpdate", "PlatoPublic",
     # Pedido
     "EstadoPedido", "Pedido", "PedidoBase", "PedidoCreate", "PedidoUpdate", "PedidoPublic",
+    "PedidoConDetallesPublic",
     # DetallePedido
     "DetallePedido", "DetallePedidoBase", "DetallePedidoCreate",
     "DetallePedidoUpdate", "DetallePedidoPublic",
