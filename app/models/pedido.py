@@ -1,8 +1,14 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
+from typing import TYPE_CHECKING, Optional
+from sqlmodel import AutoString, Field, Relationship, SQLModel
+from app.models.detalle_pedido import DetallePedidoPublic
 
-from sqlmodel import AutoString, Field, SQLModel
+
+if TYPE_CHECKING:
+    from app.models.detalle_pedido import DetallePedido
+    from app.models.mesa import Mesa
 
 
 # ==========================================
@@ -22,13 +28,19 @@ class EstadoPedido(str, Enum):
 # 1. Base común (propiedades compartidas)
 # ==========================================
 class PedidoBase(SQLModel):
-    """Propiedades que el cliente puede enviar.
-
-    Nota: id_mesa (FK) se agregará en la clase de relaciones.
-    """
+    """Propiedades que el cliente puede enviar."""
 
     observaciones: str | None = Field(
         default=None, max_length=500, description="Comentarios generales del pedido"
+    )
+
+    # Clave foránea obligatoria: cada pedido pertenece a una sola mesa.
+    # RESTRICT: no se puede borrar una mesa que tenga pedidos (historial de ventas).
+    id_mesa: int = Field(
+        foreign_key="mesas.id",
+        ondelete="RESTRICT",
+        index=True,
+        description="ID de la mesa que registra el pedido",
     )
 
 
@@ -56,6 +68,17 @@ class Pedido(PedidoBase, table=True):
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    # LADO 'MUCHOS' (Mesa -> Pedido 1:N): la mesa a la que pertenece el pedido.
+    mesa: Optional["Mesa"] = Relationship(back_populates="pedidos")
+
+    # LADO '1' (Pedido -> DetallePedido 1:N): líneas del pedido.
+    # Un detalle no existe sin su pedido: al borrar el pedido se borran sus detalles
+    # (cascade_delete en el ORM + ondelete="CASCADE" en la FK de DetallePedido).
+    detalles: list["DetallePedido"] = Relationship(
+        back_populates="pedido",
+        cascade_delete=True,
     )
 
 
@@ -87,3 +110,13 @@ class PedidoPublic(PedidoBase):
     total: Decimal
     created_at: datetime
     updated_at: datetime
+
+
+class PedidoConDetallesPublic(PedidoPublic):
+    """Respuesta de GET /orders/{id}: el pedido con sus detalles.
+
+    DetallePedidoPublic solo expone id_pedido e id_plato (no los objetos
+    completos), así la serialización termina aquí y no hay ciclos.
+    """
+
+    detalles: list[DetallePedidoPublic] = []
