@@ -22,6 +22,7 @@ from app.repositories import (
     PedidoRepository,
     PlatoRepository,
 )
+from app.routers import api_router
 from app.services import (
     DetallePedidoService,
     MesaService,
@@ -145,6 +146,9 @@ app = FastAPI(
     version=settings.VERSION,
     lifespan=lifespan,
 )
+
+# Capa 5: registra todos los routers bajo /api/v1 (ej: /api/v1/tables/)
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/health", tags=["Health"])
