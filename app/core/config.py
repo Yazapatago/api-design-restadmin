@@ -24,6 +24,22 @@ class Settings(BaseSettings):
 
     ECHO_SQL: bool = False
 
+    # Orígenes permitidos para CORS (separados por coma)
+    CORS_ORIGINS: str = (
+        "https://restadmin-frontend.onrender.com,"
+        "http://localhost:5173,"
+        "http://localhost:3000"
+    )
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Retorna la lista de orígenes CORS normalizados (sin espacios ni '/' final)."""
+        return [
+            origin.strip().rstrip("/")
+            for origin in self.CORS_ORIGINS.split(",")
+            if origin.strip()
+        ]
+
     @property
     def DATABASE_URL(self) -> str:
         """Retorna la URL asíncrona adecuada según DB_TYPE adaptando la cadena de Neon."""
