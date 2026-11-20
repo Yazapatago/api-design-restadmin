@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from scalar_fastapi import get_scalar_api_reference
 
@@ -247,6 +248,15 @@ app = FastAPI(
     description=DESCRIPCION_API,
     openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
+)
+
+# Configuración de CORS para permitir peticiones desde el frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Capa 5: registra todos los routers bajo /api/v1 (ej: /api/v1/tables/)
