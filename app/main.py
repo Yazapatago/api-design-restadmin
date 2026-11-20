@@ -150,6 +150,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await init_db()
     yield
 
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -181,6 +182,7 @@ async def test_services_endpoint(
         "resultados": resultados,
     }
 
+
 async def main_cli() -> None:
     print("=" * 65)
     print("[INICIO] PRUEBA DE LA CAPA DE SERVICIOS (REGLAS DE NEGOCIO)")
@@ -201,7 +203,7 @@ async def main_cli() -> None:
             r = await ejecutar_pruebas_servicios(
                 get_mesa_service(mesa_repo, pedido_repo),
                 get_plato_service(plato_repo),
-                get_pedido_service(pedido_repo, mesa_repo),
+                get_pedido_service(pedido_repo, mesa_repo, plato_repo),
                 get_detalle_pedido_service(detalle_repo, pedido_repo, plato_repo),
             )
 

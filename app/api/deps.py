@@ -86,9 +86,12 @@ def get_plato_service(plato_repo: PlatoRepoDep) -> PlatoService:
 def get_pedido_service(
     pedido_repo: PedidoRepoDep,
     mesa_repo: MesaRepoDep,
+    plato_repo: PlatoRepoDep,
 ) -> PedidoService:
-    """Construye PedidoService (necesita Mesa para validar que exista)."""
-    return PedidoService(pedido_repo=pedido_repo, mesa_repo=mesa_repo)
+    """Construye PedidoService (necesita Mesa y Plato para validar el pedido)."""
+    return PedidoService(
+        pedido_repo=pedido_repo, mesa_repo=mesa_repo, plato_repo=plato_repo
+    )
 
 
 def get_detalle_pedido_service(

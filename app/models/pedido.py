@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 from sqlmodel import AutoString, Field, Relationship, SQLModel
-from app.models.detalle_pedido import DetallePedidoPublic
+from app.models.detalle_pedido import DetallePedidoCreate, DetallePedidoPublic
 
 
 if TYPE_CHECKING:
@@ -86,9 +86,22 @@ class Pedido(PedidoBase, table=True):
 # 3. DTOs de la API
 # ==========================================
 class PedidoCreate(PedidoBase):
-    """Schema para crear (POST) o reemplazar (PUT) un pedido.
+    """Schema para crear (POST) un pedido, opcionalmente con sus platos.
 
-    Los 'items' del README dependen de relaciones y se agregarán después.
+    Ej: {"id_mesa": 3, "items": [{"id_plato": 7, "cantidad": 2}]}
+    Si no se envían items, el pedido se crea vacío y los platos se agregan
+    después con POST /orders/{id}/items.
+    """
+
+    items: list[DetallePedidoCreate] = Field(
+        default_factory=list, description="Platos iniciales del pedido"
+    )
+
+
+class PedidoReplace(PedidoBase):
+    """Schema para reemplazar (PUT) los datos generales de un pedido.
+
+    No incluye items: los platos se gestionan con /orders/{id}/items.
     """
 
     pass

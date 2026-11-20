@@ -40,11 +40,23 @@ class DetallePedidoService:
 
     async def list_all(
         self,
+        *,
+        id_plato: int | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[DetallePedido]:
-        """Obtiene la lista de detalles de pedido paginados."""
-        return await self.detalle_repo.get_multi(skip=skip, limit=limit)
+        """Lista detalles paginados; con id_plato muestra las ventas de ese plato."""
+        if id_plato is not None:
+            plato = await self.plato_repo.get_by_id(id_plato)
+            if not plato:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="El plato indicado no existe",
+                )
+
+        return await self.detalle_repo.get_filtered(
+            id_plato=id_plato, skip=skip, limit=limit
+        )
 
     async def list_by_pedido(self, pedido_id: int) -> list[DetallePedido]:
         """Obtiene todas las líneas de un pedido validando que el pedido exista."""
@@ -72,7 +84,7 @@ class DetallePedidoService:
         if pedido.estado in (EstadoPedido.PAGADO, EstadoPedido.CANCELADO):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"No se pueden agregar platos a un pedido en estado '{pedido.estado.value}'",
+                detail=f"No se pueden agregar platos a un pedido en estado '{EstadoPedido(pedido.estado).value}'",
             )
 
         # 2. Validar que el plato exista y esté disponible
@@ -112,6 +124,48 @@ class DetallePedidoService:
                 await self.pedido_repo.update_total(pedido)
 
         return detalle_actualizado
+
+    async def replace(
+        self,
+        detalle_id: int,
+        detalle_in: DetallePedidoCreate,
+    ) -> DetallePedido:
+        """PUT: reemplaza plato, cantidad y notas de un detalle.
+
+        Reglas de negocio:
+        - El pedido no puede estar pagado ni cancelado (400).
+        - Si cambia el plato: debe existir (404), estar disponible (400) y se
+          cobra su precio actual. Si no cambia, se conserva el precio original.
+        - Se recalcula el total del pedido.
+        """
+        detalle = await self.get_by_id(detalle_id)
+
+        pedido = await self.pedido_repo.get_by_id(detalle.id_pedido)  # type: ignore[arg-type]
+        if pedido and pedido.estado in (EstadoPedido.PAGADO, EstadoPedido.CANCELADO):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No se puede modificar un pedido en estado '{EstadoPedido(pedido.estado).value}'",
+            )
+
+        precio_unitario = detalle.precio_unitario
+        if detalle_in.id_plato != detalle.id_plato:
+            plato = await self.plato_repo.get_by_id(detalle_in.id_plato)
+            if not plato:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="El plato indicado no existe",
+                )
+            if not plato.disponible:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El plato solicitado no está disponible",
+                )
+            precio_unitario = plato.precio
+
+        detalle = await self.detalle_repo.replace(detalle, detalle_in, precio_unitario)
+        if pedido:
+            await self.pedido_repo.update_total(pedido)
+        return detalle
 
     async def delete(self, detalle_id: int) -> None:
         """Elimina un detalle por su ID y recalcula el total del pedido asociado."""

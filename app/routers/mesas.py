@@ -40,8 +40,18 @@ async def get_mesa(mesa_id: int, service: MesaServiceDep) -> Mesa:
 
 
 # ==========================================
-# UPDATE (PATCH: solo los campos enviados)
+# UPDATE
+#   PUT:   reemplaza todos los datos (campos omitidos vuelven a su valor por defecto)
+#   PATCH: solo cambia los campos enviados
 # ==========================================
+@router.put("/{mesa_id}", response_model=MesaPublic)
+async def replace_mesa(
+    mesa_id: int, mesa_in: MesaCreate, service: MesaServiceDep
+) -> Mesa:
+    """Reemplaza todos los datos de una mesa. 400 si el número ya está en uso."""
+    return await service.replace(mesa_id, mesa_in)
+
+
 @router.patch("/{mesa_id}", response_model=MesaPublic)
 async def update_mesa(
     mesa_id: int, mesa_in: MesaUpdate, service: MesaServiceDep

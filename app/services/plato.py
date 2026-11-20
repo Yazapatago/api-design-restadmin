@@ -38,7 +38,7 @@ class PlatoService:
         *,
         search: str | None = None,
         categoria: CategoriaPlato | None = None,
-        solo_disponibles: bool = False,
+        disponible: bool | None = None,
         precio_min: Decimal | None = None,
         precio_max: Decimal | None = None,
         skip: int = 0,
@@ -48,7 +48,7 @@ class PlatoService:
         return await self.plato_repo.get_filtered(
             search=search,
             categoria=categoria,
-            solo_disponibles=solo_disponibles,
+            disponible=disponible,
             precio_min=precio_min,
             precio_max=precio_max,
             skip=skip,
@@ -75,6 +75,11 @@ class PlatoService:
         """Actualiza el plato (ej: PATCH {"disponible": false} para marcarlo agotado)."""
         plato = await self.get_by_id(plato_id)
         return await self.plato_repo.update(plato, plato_in)
+
+    async def replace(self, plato_id: int, plato_in: PlatoCreate) -> Plato:
+        """PUT: reemplaza todos los datos del plato previa verificación de su existencia."""
+        plato = await self.get_by_id(plato_id)
+        return await self.plato_repo.replace(plato, plato_in)
 
     # ==========================================
     # OPERACIÓN DE ELIMINACIÓN (DELETE)

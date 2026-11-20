@@ -79,6 +79,24 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await self.session.refresh(db_obj)
         return db_obj
 
+    async def replace(self, db_obj: ModelType, obj_in: SQLModel) -> ModelType:
+        """Reemplaza todos los campos editables de un registro (PUT).
+
+        A diferencia de update (PATCH), aquí NO se usa exclude_unset: los campos
+        que el cliente no envíe vuelven a su valor por defecto del schema.
+        """
+        replace_data: dict[str, Any] = obj_in.model_dump()
+        for field, value in replace_data.items():
+            setattr(db_obj, field, value)
+
+        if hasattr(db_obj, "updated_at"):
+            db_obj.updated_at = datetime.now(timezone.utc)  # type: ignore[attr-defined]
+
+        self.session.add(db_obj)
+        await self.session.commit()
+        await self.session.refresh(db_obj)
+        return db_obj
+
     # ==========================================
     # OPERACIÓN DE ELIMINACIÓN (DELETE)
     # ==========================================

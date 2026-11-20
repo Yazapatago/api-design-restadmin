@@ -51,6 +51,27 @@ class DetallePedidoRepository(
         result = await self.session.execute(statement)
         return result.scalar_one_or_none()
 
+    async def get_filtered(
+        self,
+        *,
+        id_plato: int | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[DetallePedido]:
+        """Lista detalles aplicando únicamente los filtros que se envíen.
+
+        Con id_plato se obtienen las ventas de un plato (ej: ?id_plato=7).
+        """
+        statement = select(DetallePedido)
+
+        # Filtro 1: Líneas de un plato específico
+        if id_plato is not None:
+            statement = statement.where(DetallePedido.id_plato == id_plato)
+
+        statement = statement.order_by(DetallePedido.id).offset(skip).limit(limit)
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
     # ==========================================
     # OPERACIÓN DE CREACIÓN (CREATE)
     # ==========================================
@@ -96,6 +117,29 @@ class DetallePedidoRepository(
             setattr(db_obj, field, value)
 
         db_obj.subtotal = db_obj.precio_unitario * db_obj.cantidad
+        db_obj.updated_at = datetime.now(timezone.utc)
+        self.session.add(db_obj)
+        await self.session.commit()
+        await self.session.refresh(db_obj)
+        return db_obj
+
+    async def replace(
+        self,
+        db_obj: DetallePedido,
+        detalle_in: DetallePedidoCreate,
+        precio_unitario: Decimal,
+    ) -> DetallePedido:
+        """Reemplaza plato, cantidad y notas de un detalle (PUT).
+
+        precio_unitario lo entrega el servicio: se conserva si el plato no cambia
+        y se toma el precio actual si el detalle pasa a otro plato.
+        """
+        replace_data: dict[str, Any] = detalle_in.model_dump()
+        for field, value in replace_data.items():
+            setattr(db_obj, field, value)
+
+        db_obj.precio_unitario = precio_unitario
+        db_obj.subtotal = precio_unitario * db_obj.cantidad
         db_obj.updated_at = datetime.now(timezone.utc)
         self.session.add(db_obj)
         await self.session.commit()
