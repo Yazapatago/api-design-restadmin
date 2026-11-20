@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
+from pydantic import ConfigDict
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -87,11 +88,20 @@ class DetallePedido(DetallePedidoBase, table=True):
 class DetallePedidoCreate(DetallePedidoBase):
     """Schema para crear o reemplazar (PUT) un detalle."""
 
-    pass
+    # Ejemplo que muestran Swagger (/docs) y Scalar (/scalar) en el cuerpo de la petición
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"id_plato": 3, "cantidad": 1, "notas": "Ajiaco con alcaparras aparte"}]
+        }
+    )
 
 
 class DetallePedidoUpdate(SQLModel):
     """Schema para actualizar parcialmente (PATCH): todo opcional."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"cantidad": 3, "notas": "Sin cebolla"}]}
+    )
 
     cantidad: int | None = Field(default=None, gt=0)
     notas: str | None = Field(default=None, max_length=255)

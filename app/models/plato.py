@@ -3,6 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from pydantic import ConfigDict
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -77,11 +78,29 @@ class Plato(PlatoBase, table=True):
 class PlatoCreate(PlatoBase):
     """Schema para crear (POST) o reemplazar (PUT) un plato."""
 
-    pass
+    # Ejemplo que muestran Swagger (/docs) y Scalar (/scalar) en el cuerpo de la petición
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "nombre": "Bandeja Paisa",
+                    "descripcion": "Frijoles, arroz, carne molida, chicharrón, chorizo, "
+                    "huevo frito, tajadas de maduro, arepa y aguacate",
+                    "categoria": "plato_fuerte",
+                    "precio": "32000.00",
+                    "disponible": True,
+                }
+            ]
+        }
+    )
 
 
 class PlatoUpdate(SQLModel):
     """Schema para actualizar parcialmente (PATCH): todo opcional."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"precio": "34000.00", "disponible": False}]}
+    )
 
     nombre: str | None = Field(default=None, min_length=2, max_length=100)
     descripcion: str | None = Field(default=None, max_length=500)

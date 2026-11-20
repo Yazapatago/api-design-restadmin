@@ -11,7 +11,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    PROJECT_NAME: str = "FastAPI SQLModel API"
+    PROJECT_NAME: str = "RestAdmin API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
 
