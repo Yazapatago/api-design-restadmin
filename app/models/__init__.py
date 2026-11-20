@@ -26,6 +26,7 @@ from app.models.pedido import (
     PedidoConDetallesPublic,
     PedidoCreate,
     PedidoPublic,
+    PedidoReplace,
     PedidoUpdate,
 )
 from app.models.plato import (
@@ -44,7 +45,7 @@ __all__ = [
     "CategoriaPlato", "Plato", "PlatoBase", "PlatoCreate", "PlatoUpdate", "PlatoPublic",
     # Pedido
     "EstadoPedido", "Pedido", "PedidoBase", "PedidoCreate", "PedidoUpdate", "PedidoPublic",
-    "PedidoConDetallesPublic",
+    "PedidoReplace", "PedidoConDetallesPublic",
     # DetallePedido
     "DetallePedido", "DetallePedidoBase", "DetallePedidoCreate",
     "DetallePedidoUpdate", "DetallePedidoPublic",

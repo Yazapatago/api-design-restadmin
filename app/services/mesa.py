@@ -91,6 +91,23 @@ class MesaService:
 
         return await self.mesa_repo.update(mesa, mesa_in)
 
+    async def replace(self, mesa_id: int, mesa_in: MesaCreate) -> Mesa:
+        """
+        PUT: reemplaza todos los datos de la mesa.
+        Mismas reglas que update: la mesa debe existir y el número no puede chocar.
+        """
+        mesa = await self.get_by_id(mesa_id)
+
+        if mesa_in.numero != mesa.numero:
+            existing = await self.mesa_repo.get_by_numero(mesa_in.numero)
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"El número de mesa {mesa_in.numero} ya está en uso",
+                )
+
+        return await self.mesa_repo.replace(mesa, mesa_in)
+
     # ==========================================
     # OPERACIÓN DE ELIMINACIÓN (DELETE)
     # ==========================================

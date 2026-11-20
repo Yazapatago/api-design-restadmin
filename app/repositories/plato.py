@@ -21,7 +21,7 @@ class PlatoRepository(BaseRepository[Plato, PlatoCreate, PlatoUpdate]):
         *,
         search: str | None = None,
         categoria: CategoriaPlato | None = None,
-        solo_disponibles: bool = False,
+        disponible: bool | None = None,
         precio_min: Decimal | None = None,
         precio_max: Decimal | None = None,
         skip: int = 0,
@@ -38,9 +38,9 @@ class PlatoRepository(BaseRepository[Plato, PlatoCreate, PlatoUpdate]):
         if categoria is not None:
             statement = statement.where(Plato.categoria == categoria)
 
-        # Filtro 3: Solo platos que se pueden pedir (no agotados)
-        if solo_disponibles:
-            statement = statement.where(Plato.disponible == True)  # noqa: E712
+        # Filtro 3: Disponibilidad (true = se pueden pedir, false = agotados)
+        if disponible is not None:
+            statement = statement.where(Plato.disponible == disponible)
 
         # Filtro 4: Precio mínimo
         if precio_min is not None:
