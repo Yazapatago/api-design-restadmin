@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
+from pydantic import ConfigDict
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 from app.models.detalle_pedido import DetallePedidoCreate, DetallePedidoPublic
 
@@ -93,6 +94,22 @@ class PedidoCreate(PedidoBase):
     después con POST /orders/{id}/items.
     """
 
+    # Ejemplo que muestran Swagger (/docs) y Scalar (/scalar) en el cuerpo de la petición
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "id_mesa": 1,
+                    "observaciones": "Cliente con prisa, traer la bebida primero",
+                    "items": [
+                        {"id_plato": 1, "cantidad": 2, "notas": "Sin chicharrón"},
+                        {"id_plato": 2, "cantidad": 2, "notas": "Limonada de coco bien fría"},
+                    ],
+                }
+            ]
+        }
+    )
+
     items: list[DetallePedidoCreate] = Field(
         default_factory=list, description="Platos iniciales del pedido"
     )
@@ -104,11 +121,19 @@ class PedidoReplace(PedidoBase):
     No incluye items: los platos se gestionan con /orders/{id}/items.
     """
 
-    pass
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"id_mesa": 3, "observaciones": "Se pasaron a la mesa de la ventana"}]
+        }
+    )
 
 
 class PedidoUpdate(SQLModel):
     """Schema para actualizar parcialmente (PATCH): todo opcional."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"estado": "en_preparacion"}]}
+    )
 
     observaciones: str | None = Field(default=None, max_length=500)
     estado: EstadoPedido | None = Field(default=None)

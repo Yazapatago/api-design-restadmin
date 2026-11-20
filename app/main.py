@@ -5,6 +5,8 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import HTMLResponse
+from scalar_fastapi import get_scalar_api_reference
 
 from app.api.deps import (
     DetallePedidoServiceDep,
@@ -151,14 +153,114 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
+# ==========================================
+# Metadatos de OpenAPI (los leen Swagger /docs, ReDoc /redoc y Scalar /scalar)
+# ==========================================
+DESCRIPCION_API = """
+**RestAdmin** es una API REST para la gestión operativa de un restaurante:
+**mesas**, **platos** del menú, **pedidos** y sus **detalles de pedido**
+(las líneas con cada plato, cantidad y precio).
+
+Todas las rutas de negocio están bajo `/api/v1`. No requiere autenticación.
+
+## Reglas de negocio principales
+
+### Mesas
+* El **número de mesa es único**: crear o cambiar una mesa a un número ya usado responde `400`.
+* **No se puede eliminar una mesa con pedidos registrados** (se protege el historial de ventas): `400`.
+
+### Platos
+* El precio debe ser **mayor a 0**.
+* Un plato con `disponible = false` está **agotado** y **no se puede agregar a un pedido**: `400`.
+
+### Pedidos
+* La **mesa del pedido debe existir**: `404`.
+* Se puede crear el pedido con sus platos en una sola petición (`items`). Se valida
+  **todo antes de guardar**: si un plato no existe (`404`) o está agotado (`400`), no se crea nada.
+* El `estado`, el `total` y la `fecha_hora` los controla el servidor.
+  Ciclo de vida: `pendiente` → `en_preparacion` → `entregado` → `pagado` (o `cancelado`).
+* **Solo se pueden eliminar pedidos en estado `pendiente`**: `400`.
+
+### Detalles de pedido
+* El `precio_unitario` se **copia del precio del plato al momento de pedirlo**;
+  si luego cambia el precio del menú, el pedido conserva el precio original.
+* El `subtotal` de cada línea y el **`total` del pedido se recalculan automáticamente**
+  al agregar, modificar o quitar platos.
+* **No se pueden agregar platos (ni reemplazarlos con `PUT`) en pedidos `pagado` o `cancelado`**: `400`.
+* Si con `PUT` se cambia el plato de una línea, el nuevo plato debe existir y estar disponible,
+  y se cobra su precio actual.
+
+## Códigos de respuesta
+| Código | Significado |
+|--------|-------------|
+| `200` / `201` | Operación exitosa / recurso creado |
+| `204` | Recurso eliminado (sin contenido) |
+| `400` | Se incumplió una regla de negocio |
+| `404` | El recurso (o uno relacionado) no existe |
+| `422` | Datos de entrada inválidos (validación de Pydantic) |
+
+## Endpoint de pruebas
+`POST /test-services` ejecuta las validaciones de la capa de servicios.
+**Crea datos de prueba** (la mesa número `9999`, dos platos, un pedido y su detalle)
+**y los borra al terminar**.
+"""
+
+TAGS_METADATA = [
+    {
+        "name": "Mesas",
+        "description": "Registro de las mesas del restaurante: número (único), capacidad, "
+        "ubicación y estado (`libre`, `ocupada`, `reservada`). Incluye la consulta de "
+        "los pedidos de una mesa.",
+    },
+    {
+        "name": "Platos",
+        "description": "Menú del restaurante: nombre, categoría (`entrada`, `plato_fuerte`, "
+        "`bebida`, `postre`), precio y disponibilidad. Marca un plato como agotado con "
+        '`PATCH {"disponible": false}`.',
+    },
+    {
+        "name": "Pedidos",
+        "description": "Pedidos de cada mesa y su ciclo de vida (`pendiente`, `en_preparacion`, "
+        "`entregado`, `pagado`, `cancelado`). Desde aquí también se agregan y quitan "
+        "platos con `/orders/{pedido_id}/items`.",
+    },
+    {
+        "name": "Detalles de Pedido",
+        "description": "Líneas de los pedidos (plato, cantidad, precio unitario y subtotal). "
+        "Se crean desde `POST /orders/{pedido_id}/items`; aquí se consultan, modifican o "
+        "eliminan, y cada cambio recalcula el total del pedido.",
+    },
+    {
+        "name": "Health",
+        "description": "Verificación rápida de que la API está en línea.",
+    },
+    {
+        "name": "Pruebas",
+        "description": "Ejecuta las validaciones de las reglas de negocio. **Crea y borra "
+        "datos de prueba** en la base de datos.",
+    },
+]
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
+    description=DESCRIPCION_API,
+    openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
 )
 
 # Capa 5: registra todos los routers bajo /api/v1 (ej: /api/v1/tables/)
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+# Documentación interactiva con Scalar, junto a Swagger (/docs) y ReDoc (/redoc).
+# include_in_schema=False: esta ruta no aparece como endpoint dentro del OpenAPI.
+@app.get("/scalar", include_in_schema=False)
+async def scalar_html() -> HTMLResponse:
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title=app.title,
+    )
 
 
 @app.get("/health", tags=["Health"])
