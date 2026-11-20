@@ -2,25 +2,32 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import FastAPI, HTTPException, status
 
+from app.api.deps import (
+    DetallePedidoServiceDep,
+    MesaServiceDep,
+    PedidoServiceDep,
+    PlatoServiceDep,
+    get_detalle_pedido_repository,
+    get_detalle_pedido_service,
+    get_mesa_repository,
+    get_mesa_service,
+    get_pedido_repository,
+    get_pedido_service,
+    get_plato_repository,
+    get_plato_service,
+)
 from app.core.config import settings
-from app.core.database import async_session_maker, engine, get_session, init_db
+from app.core.database import async_session_maker, engine, init_db
 from app.models import (
     CategoriaPlato,
     DetallePedidoCreate,
     MesaCreate,
     PedidoCreate,
     PlatoCreate,
-)
-from app.repositories import (
-    DetallePedidoRepository,
-    MesaRepository,
-    PedidoRepository,
-    PlatoRepository,
 )
 from app.routers import api_router
 from app.services import (
@@ -34,17 +41,20 @@ MESA_PRUEBA_NUMERO = 9999
 ID_INEXISTENTE = 999999
 
 
-async def ejecutar_pruebas_servicios(session: AsyncSession) -> dict[str, Any]:
-    """Ejecuta las 6 validaciones de reglas de negocio de la Capa de Servicios."""
-    mesa_repo = MesaRepository(session)
-    plato_repo = PlatoRepository(session)
-    pedido_repo = PedidoRepository(session)
-    detalle_repo = DetallePedidoRepository(session)
+async def ejecutar_pruebas_servicios(
+    mesa_service: MesaService,
+    plato_service: PlatoService,
+    pedido_service: PedidoService,
+    detalle_service: DetallePedidoService,
+) -> dict[str, Any]:
+    """Ejecuta las 6 validaciones de reglas de negocio de la Capa de Servicios.
 
-    mesa_service = MesaService(mesa_repo, pedido_repo)
-    plato_service = PlatoService(plato_repo)
-    pedido_service = PedidoService(pedido_repo, mesa_repo)
-    detalle_service = DetallePedidoService(detalle_repo, pedido_repo, plato_repo)
+    Recibe los servicios ya construidos (por FastAPI o por main_cli) en lugar
+    de instanciarlos aquí.
+    """
+    # Los repositorios se usan solo para la limpieza de datos de prueba
+    mesa_repo = mesa_service.mesa_repo
+    pedido_repo = pedido_service.pedido_repo
 
     # Limpieza previa rápida si quedó la mesa de prueba
     existing_mesa = await mesa_repo.get_by_numero(MESA_PRUEBA_NUMERO)
@@ -142,7 +152,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title=f"{settings.PROJECT_NAME} - Hasta Capa Servicios",
+    title=settings.PROJECT_NAME,
     version=settings.VERSION,
     lifespan=lifespan,
 )
@@ -153,14 +163,20 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/health", tags=["Health"])
 async def health_check() -> dict[str, str]:
-    return {"status": "healthy", "layer": "service"}
+    return {"status": "healthy", "layer": "routers"}
 
 
 @app.post("/test-services", tags=["Pruebas"])
 async def test_services_endpoint(
-    session: Annotated[AsyncSession, Depends(get_session)],
+    mesa_service: MesaServiceDep,
+    plato_service: PlatoServiceDep,
+    pedido_service: PedidoServiceDep,
+    detalle_service: DetallePedidoServiceDep,
 ) -> dict[str, Any]:
-    resultados = await ejecutar_pruebas_servicios(session)
+    """FastAPI inyecta los 4 servicios ya armados, compartiendo una sola sesión."""
+    resultados = await ejecutar_pruebas_servicios(
+        mesa_service, plato_service, pedido_service, detalle_service
+    )
     return {
         "mensaje": "Todas las reglas de negocio de la capa de servicios fueron validadas exitosamente",
         "resultados": resultados,
@@ -177,7 +193,19 @@ async def main_cli() -> None:
         print("\n[EJECUTANDO VALIDACIONES DE SERVICIO]...")
 
         async with async_session_maker() as session:
-            r = await ejecutar_pruebas_servicios(session)
+            # Fuera de una petición HTTP no hay Depends: llamamos las mismas
+            # fábricas de deps.py pasando los parámetros a mano.
+            mesa_repo = get_mesa_repository(session)
+            plato_repo = get_plato_repository(session)
+            pedido_repo = get_pedido_repository(session)
+            detalle_repo = get_detalle_pedido_repository(session)
+
+            r = await ejecutar_pruebas_servicios(
+                get_mesa_service(mesa_repo, pedido_repo),
+                get_plato_service(plato_repo),
+                get_pedido_service(pedido_repo, mesa_repo, plato_repo),
+                get_detalle_pedido_service(detalle_repo, pedido_repo, plato_repo),
+            )
 
         print(f"  [OK] 1. Creacion exitosa: {r['1_creacion_exitosa']}")
         print(f"  [OK] 2. Bloqueo de Mesa Duplicada (HTTP 400): {r['2_regla_mesa_duplicada_bloqueada']}")

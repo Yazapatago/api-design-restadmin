@@ -1,6 +1,6 @@
 # 🚀 RestAdmin API
 
-![Status](https://img.shields.io/badge/Status-Planning-blue)
+![Status](https://img.shields.io/badge/Status-Implementado-brightgreen)
 ![Version](https://img.shields.io/badge/Version-1.0.0-green)
 
 ## 📖 Descripción del Proyecto
@@ -12,7 +12,7 @@ Está pensada para meseros, personal de cocina y administradores del restaurante
 El diseño guarda el precio de cada plato en el momento en que se pide. Así, si el menú cambia de precio, los pedidos ya registrados conservan el valor que realmente se cobró, lo que mantiene la información histórica de ventas consistente.
 
 ## 🎥 Video de Presentación
-* 🎬 **Enlace al video de presentación (Máx. 5 minutos):** [Haz clic aquí para ver el video](https://enlace-a-tu-video.com)
+* 🎬 **Enlace al video de presentación (Máx. 5 minutos):** [Haz clic aquí para ver el video](https://youtu.be/kMXvWcDmOhc)
 
 ## 👥 Equipo de Desarrollo
 | Nombre | Rol | GitHub |
@@ -77,7 +77,7 @@ erDiagram
 
 ## 🔌 Documentación de Endpoints (API Design)
 A continuación se detallan los endpoints diseñados bajo estándares RESTful: sustantivos en plural, kebab-case, métodos HTTP según la acción y versionado en la URL.
-Base URL propuesta: `http://api.restadmin.com/api/v1`
+Base URL propuesta: `http://api.restadmin.com/api/v1` (en local: `http://127.0.0.1:8000/api/v1`)
 
 ### 1. Recurso: Mesas (`/tables`)
 
@@ -134,23 +134,45 @@ Base URL propuesta: `http://api.restadmin.com/api/v1`
 | POST | `/orders/{id}/items` | Agregar un plato a un pedido existente | `{ "id_plato": 7, "cantidad": 2, "notas": "término medio" }` | 201 Created |
 | DELETE | `/orders/{id}/items/{item_id}` | Quitar un plato de un pedido | N/A | 204 No Content |
 
-## 🛠️ Stack Tecnológico Propuesto
-*   **Lenguaje:** Python
+## 🛠️ Stack Tecnológico
+*   **Lenguaje:** Python 3.10+
 *   **Framework:** FastAPI
-*   **Base de Datos:** PostgreSQL
-*   **Autenticación:** JWT
+*   **ORM:** SQLModel (SQLAlchemy asíncrono)
+*   **Base de Datos:** PostgreSQL (Neon) en producción y SQLite para desarrollo local
 
-## 📅 Roadmap / Próximos Pasos
-1. Configurar el entorno de desarrollo.
-2. Crear las migraciones de base de datos basadas en el diagrama ER (Mesa, Plato, Pedido, DetallePedido).
-3. Implementar los controladores para los endpoints GET.
-4. Implementar los endpoints POST, PUT, PATCH y DELETE, incluyendo el cálculo automático de subtotales y totales.
-5. Implementar los endpoints anidados de relación.
+## 🏛️ Arquitectura por Capas
+| Capa | Carpeta | Responsabilidad |
+|------|---------|-----------------|
+| 1. Configuración y Núcleo | `app/core/` | Variables de entorno y conexión asíncrona a la base de datos |
+| 2. Modelos y DTOs | `app/models/` | Tablas SQLModel, relaciones y schemas de entrada/salida |
+| 3. Acceso a Datos | `app/repositories/` | Consultas a la base de datos |
+| 4. Servicios | `app/services/` | Reglas de negocio y validaciones |
+| 5. Routers e Inyección de Dependencias | `app/routers/` y `app/api/deps.py` | Endpoints HTTP; FastAPI arma sesión, repositorios y servicios en cada petición |
+
+## ▶️ Cómo Ejecutar el Proyecto
+```bash
+git clone https://github.com/Yazapatago/api-design-restadmin.git
+cd api-design-restadmin
+python -m venv venv
+# Windows: .\venv\Scripts\Activate.ps1   |   Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # en Windows: copy .env.example .env
+uvicorn app.main:app --reload
+```
+*   Documentación interactiva (Swagger): `http://127.0.0.1:8000/docs`
+*   Por defecto usa SQLite. Para PostgreSQL/Neon, en `.env` cambia `DB_TYPE="postgres"` y pega la cadena de conexión en `POSTGRES_URL`.
+
+## 📅 Estado del Proyecto
+1. ✅ Configuración del entorno y conexión a la base de datos.
+2. ✅ Modelos y relaciones según el diagrama ER (Mesa, Plato, Pedido, DetallePedido).
+3. ✅ Repositorios y servicios con las reglas de negocio.
+4. ✅ Endpoints GET, POST, PUT, PATCH y DELETE, con cálculo automático de subtotales y totales.
+5. ✅ Endpoints anidados de relación e inyección de dependencias.
 
 ## 🔗 Enlaces
 *   **Repositorio GitHub:** [https://github.com/Yazapatago/api-design-restadmin](https://github.com/Yazapatago/api-design-restadmin)
-*   **Video de Presentación:** [https://enlace-a-tu-video.com](https://youtu.be/kMXvWcDmOhc)
+*   **Video de Presentación:** [https://youtu.be/kMXvWcDmOhc](https://youtu.be/kMXvWcDmOhc)
 *   **Organización del equipo:** No aplica
 
 ---
-**⚠️ Nota:** Este repositorio contiene solo la documentación y diseño. No incluye código fuente de la aplicación.
+**ℹ️ Nota:** Este repositorio contiene el diseño de la API y su implementación completa en FastAPI.

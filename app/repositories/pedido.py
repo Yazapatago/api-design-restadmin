@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func, select
 
-from app.models.detalle_pedido import DetallePedido
+from app.models.detalle_pedido import DetallePedido, DetallePedidoCreate
 from app.models.pedido import EstadoPedido, Pedido, PedidoCreate, PedidoUpdate
 from app.repositories.base import BaseRepository
 
@@ -65,6 +66,39 @@ class PedidoRepository(BaseRepository[Pedido, PedidoCreate, PedidoUpdate]):
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
+    async def create_with_items(
+        self,
+        *,
+        pedido_in: PedidoCreate,
+        items: list[tuple[DetallePedidoCreate, Decimal]],
+    ) -> Pedido:
+        """Inserta el pedido y sus detalles en UNA sola transacción.
+
+        items: lista de (detalle, precio_unitario). El precio lo decide el servicio
+        (copiado del plato). Si algo falla no queda un pedido a medias en la BD.
+        """
+        db_pedido = Pedido.model_validate(pedido_in.model_dump(exclude={"items"}))
+
+        for detalle_in, precio_unitario in items:
+            # id_pedido lo llena el ORM al agregar el detalle a la relación
+            db_pedido.detalles.append(
+                DetallePedido.model_validate(
+                    detalle_in,
+                    update={
+                        "precio_unitario": precio_unitario,
+                        "subtotal": precio_unitario * detalle_in.cantidad,
+                    },
+                )
+            )
+
+        db_pedido.total = sum(
+            (d.subtotal for d in db_pedido.detalles), start=Decimal("0.00")
+        )
+        self.session.add(db_pedido)
+        await self.session.commit()
+        await self.session.refresh(db_pedido)
+        return db_pedido
+
     async def update_total(self, db_pedido: Pedido) -> Pedido:
         """Recalcula el total del pedido como la suma de los subtotales de sus detalles."""
         statement = select(
@@ -73,6 +107,10 @@ class PedidoRepository(BaseRepository[Pedido, PedidoCreate, PedidoUpdate]):
         result = await self.session.execute(statement)
 
         db_pedido.total = result.scalar_one()
+        # La lista de detalles cargada en memoria puede estar desactualizada
+        # (ej: incluir un detalle recién borrado). Se marca como vencida para que
+        # el ORM no la use al guardar; get_with_detalles la vuelve a cargar.
+        self.session.expire(db_pedido, ["detalles"])
         db_pedido.updated_at = datetime.now(timezone.utc)
         self.session.add(db_pedido)
         await self.session.commit()

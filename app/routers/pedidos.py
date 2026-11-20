@@ -8,6 +8,7 @@ from app.models.pedido import (
     PedidoConDetallesPublic,
     PedidoCreate,
     PedidoPublic,
+    PedidoReplace,
     PedidoUpdate,
 )
 
@@ -17,9 +18,14 @@ router = APIRouter(prefix="/orders", tags=["Pedidos"])
 # ==========================================
 # CREATE
 # ==========================================
-@router.post("/", response_model=PedidoPublic, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=PedidoConDetallesPublic, status_code=status.HTTP_201_CREATED
+)
 async def create_pedido(pedido_in: PedidoCreate, service: PedidoServiceDep) -> Pedido:
-    """Crea un pedido para una mesa. 404 si la mesa no existe."""
+    """Crea un pedido para una mesa, opcionalmente con sus platos (items).
+
+    404 si la mesa o un plato no existe; 400 si un plato está agotado.
+    """
     return await service.create(pedido_in)
 
 
@@ -47,8 +53,18 @@ async def get_pedido(pedido_id: int, service: PedidoServiceDep) -> Pedido:
 
 
 # ==========================================
-# UPDATE (PATCH: solo los campos enviados)
+# UPDATE
+#   PUT:   reemplaza todos los datos (campos omitidos vuelven a su valor por defecto)
+#   PATCH: solo cambia los campos enviados
 # ==========================================
+@router.put("/{pedido_id}", response_model=PedidoPublic)
+async def replace_pedido(
+    pedido_id: int, pedido_in: PedidoReplace, service: PedidoServiceDep
+) -> Pedido:
+    """Reemplaza mesa y observaciones (ej: cambio de mesa). 404 si la mesa no existe."""
+    return await service.replace(pedido_id, pedido_in)
+
+
 @router.patch("/{pedido_id}", response_model=PedidoPublic)
 async def update_pedido(
     pedido_id: int, pedido_in: PedidoUpdate, service: PedidoServiceDep
