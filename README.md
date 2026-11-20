@@ -159,7 +159,10 @@ pip install -r requirements.txt
 cp .env.example .env        # en Windows: copy .env.example .env
 uvicorn app.main:app --reload
 ```
-*   Documentación interactiva (Swagger): `http://127.0.0.1:8000/docs`
+*   Documentación interactiva (Swagger UI): `http://127.0.0.1:8000/docs`
+*   Documentación interactiva (Scalar): `http://127.0.0.1:8000/scalar` — permite probar los endpoints con ejemplos ya cargados y genera código de ejemplo (curl, Python, JavaScript, etc.)
+*   Documentación de solo lectura (ReDoc): `http://127.0.0.1:8000/redoc`
+*   Esquema OpenAPI en JSON: `http://127.0.0.1:8000/openapi.json`
 *   Por defecto usa SQLite. Para PostgreSQL/Neon, en `.env` cambia `DB_TYPE="postgres"` y pega la cadena de conexión en `POSTGRES_URL`.
 
 ## 📅 Estado del Proyecto

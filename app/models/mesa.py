@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from pydantic import ConfigDict
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -70,11 +71,20 @@ class Mesa(MesaBase, table=True):
 class MesaCreate(MesaBase):
     """Schema para crear (POST) o reemplazar (PUT) una mesa."""
 
-    pass
+    # Ejemplo que muestran Swagger (/docs) y Scalar (/scalar) en el cuerpo de la petición
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"numero": 5, "capacidad": 4, "ubicacion": "terraza", "estado": "libre"}
+            ]
+        }
+    )
 
 
 class MesaUpdate(SQLModel):
     """Schema para actualizar parcialmente (PATCH): todo opcional."""
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{"estado": "ocupada"}]})
 
     numero: int | None = Field(default=None, gt=0)
     capacidad: int | None = Field(default=None, gt=0)
